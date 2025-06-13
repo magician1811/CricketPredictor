@@ -145,3 +145,57 @@ if st.button("Predict Winner"):
             st.write(f"Draws/No Result at venue: {v_total_specific - len(valid_specific)}")
     else:
         st.info("No win percentage data for these teams at this venue.")
+# ------------------------------
+# Player Search Section
+# ------------------------------
+import datetime
+
+st.markdown("---")
+st.header("🔍 Player Search")
+
+try:
+    player_df = pd.read_csv("player_data.csv")
+
+    # Clean up
+    player_df["fullname"] = player_df["fullname"].fillna("Unknown")
+    player_df["dateofbirth"] = pd.to_datetime(player_df["dateofbirth"], errors='coerce')
+
+    player_names = sorted(player_df["fullname"].dropna().unique())
+    selected_player = st.selectbox("Search Player by Name", player_names)
+
+    if selected_player:
+        p = player_df[player_df["fullname"] == selected_player].iloc[0]
+
+        # Calculate Age
+        age = "Unknown"
+        if pd.notnull(p["dateofbirth"]):
+            today = datetime.date.today()
+            born = p["dateofbirth"].date()
+            age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if pd.notnull(p["image_path"]):
+                st.image(p["image_path"], caption=p["fullname"], width=150)
+
+        with col2:
+            st.subheader(p["fullname"])
+            st.write(f"**Country:** {p['country_name']}")
+            st.write(f"**Age:** {age}")
+            st.write(f"**Gender:** {p['gender']}")
+            st.write(f"**Batting Style:** {p['battingstyle']}")
+            st.write(f"**Bowling Style:** {p['bowlingstyle']}")
+            st.write(f"**Role/Position:** {p['position']}")
+
+        # Download button
+        player_data = p.to_frame().T
+        st.download_button(
+            label="📥 Download Player Info",
+            data=player_data.to_csv(index=False),
+            file_name=f"{selected_player.replace(' ', '_')}_info.csv",
+            mime="text/csv"
+        )
+except FileNotFoundError:
+    st.error("⚠️ player_data.csv file not found.")
+except Exception as e:
+    st.error(f"Error loading player data: {e}")
